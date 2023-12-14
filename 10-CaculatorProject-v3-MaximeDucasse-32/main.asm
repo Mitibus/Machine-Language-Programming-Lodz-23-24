@@ -49,40 +49,7 @@ section .bss
     int SYS_CALL
 %endmacro
 
-section .text
-    global _start
-
-_start:
-    ; Display the menu
-    print menuMsg, lenMenuMsg
-
-    ; Ask user to make a choice
-    read menuChoice, 2
-    
-    ; Compare user input
-    cmp byte [menuChoice], '1'
-    je addition
-    cmp byte [menuChoice], '2'
-    je subtraction
-    cmp byte [menuChoice], '3'
-    je multiplication
-    cmp byte [menuChoice], '4'
-    je division
-    cmp byte [menuChoice], '5'
-    je modulo
-    cmp byte [menuChoice], '6'
-    je increment
-    cmp byte [menuChoice], '7'
-    je decrement
-    cmp byte [menuChoice], '8'
-    je exit
-
-    jmp _start
-
-addition:
-    ; Show the addition message
-    print additionMessage, lenAdditionMessage
-
+%macro askForTwoDigit 0
     ; Ask user for the firstDigit
     print askFirstDigitMessage, lenAskFirstDigitMessage
     
@@ -94,6 +61,64 @@ addition:
     
     ; Ask user to enter his digit
     read secondDigit, 2
+%endmacro
+
+%macro askForOneDigit 0
+    ; Ask user for the firstDigit
+    print askFirstDigitMessage, lenAskFirstDigitMessage
+    
+    ; Ask user to enter his digit
+    read firstDigit, 2
+%endmacro
+
+%macro print_result 0
+    ; Print the result message
+    print resultMessage, lenResultMessage
+        
+    ; Print the result digit
+    print result, 1
+%endmacro
+
+section .text
+    global _start
+
+_start:
+    ; Display the menu
+    print menuMsg, lenMenuMsg
+
+    ; Ask user to make a choice
+    read menuChoice, 2
+
+    ; Compare user input
+    cmp byte [menuChoice], '1'
+    je addition
+
+    cmp byte [menuChoice], '2'
+    je subtraction
+
+    cmp byte [menuChoice], '3'
+    je multiplication
+
+    cmp byte [menuChoice], '4'
+    je division
+
+    cmp byte [menuChoice], '5'
+    je modulo
+
+    cmp byte [menuChoice], '6'
+    je increment
+
+    cmp byte [menuChoice], '7'
+    je decrement
+
+    cmp byte [menuChoice], '8'
+    je exit
+
+    jmp _start
+
+addition:
+    print additionMessage, lenAdditionMessage
+    askForTwoDigit
 
     ; Convert user input to int
     mov eax, [firstDigit]
@@ -108,29 +133,14 @@ addition:
     add eax, '0'
     mov [result], eax
 
-    ; Print the result message
-    print resultMessage, lenResultMessage
-        
-    ; Print the result digit
-    print result, 1
+    print_result
 
     jmp _start
 
 subtraction:
     ; Show the substraction message
     print substractionMessage, lenSubstractionMessage
-    
-    ; Ask user for the firstDigit
-    print askFirstDigitMessage, lenAskFirstDigitMessage
-   
-    ; Ask user to enter his digit
-    read firstDigit, 2
-
-    ; Ask user for the secondDigit
-    print askSecondDigitMessage, lenAskSecondDigitMessage
-    
-    ; Ask user to enter his digit
-    read secondDigit, 2
+    askForTwoDigit
 
     ; Convert user input to int
     mov eax, [firstDigit]
@@ -145,29 +155,14 @@ subtraction:
     add eax, '0'
     mov [result], eax
 
-    ; Print the result message
-    print resultMessage, lenResultMessage
-        
-    ; Print the result digit
-    print result, 1
+    print_result
 
     jmp _start
 
 multiplication:
     ; Show the product message
     print productMessage, lenProductMessage
-    
-    ; Ask user for the firstDigit
-    print askFirstDigitMessage, lenAskFirstDigitMessage
-    
-    ; Ask user to enter his digit
-    read firstDigit, 2
-
-    ; Ask user for the secondDigit
-    print askSecondDigitMessage, lenAskSecondDigitMessage
-    
-    ; Ask user to enter his digit
-    read secondDigit, 2
+    askForTwoDigit
 
     ; Convert user input to int
     mov eax, [firstDigit]
@@ -182,29 +177,14 @@ multiplication:
     add eax, '0'
     mov [result], eax
 
-    ; Print the result message
-    print resultMessage, lenResultMessage
-        
-    ; Print the result digit
-    print result, 1
+    print_result
     
     jmp _start
 
 division:
     ; Show the division message
     print divisionMessage, lenDivisionMessage
-    
-    ; Ask user for the firstDigit
-    print askFirstDigitMessage, lenAskFirstDigitMessage
-    
-    ; Ask user to enter his digit
-    read firstDigit, 2
-
-    ; Ask user for the secondDigit
-    print askSecondDigitMessage, lenAskSecondDigitMessage
-    
-    ; Ask user to enter his digit
-    read secondDigit, 2
+    askForTwoDigit
 
     ; Convert user input to int
     movzx eax, byte [firstDigit] ; Use movzx to complete size with zero as we take only one byte from firstDigit
@@ -221,29 +201,14 @@ division:
     add eax, '0'
     mov [result], eax
 
-    ; Print the result message
-    print resultMessage, lenResultMessage
-        
-    ; Print the result digit
-    print result, 1
+    print_result
 
     jmp _start
 
 modulo:
     ; Show the modulo message
     print moduloMessage, lenModuloMessage
-    
-    ; Ask user for the firstDigit
-    print askSecondDigitMessage, lenAskSecondDigitMessage
-
-    ; Ask user to enter his digit
-    read firstDigit, 2
-
-    ; Ask user for the secondDigit
-    print askSecondDigitMessage, lenAskSecondDigitMessage
-
-    ; Ask user to enter his digit
-    read secondDigit, 2
+    askForTwoDigit
 
     ; Convert user input to int
     movzx eax, byte [firstDigit] ; Use movzx to complete size with zero as we take only one byte from firstDigit
@@ -261,46 +226,28 @@ modulo:
     add edx, '0'
     mov [result], edx 
 
-    ; Print the result message
-    print resultMessage, lenResultMessage
-        
-    ; Print the result digit
-    print result, 1
+    print_result
 
     jmp _start
 
 increment:
     ; Show the increment message
     print incrementMessage, lenIncrementMessage
-    
-    ; Ask user for the firstDigit
-    print askSecondDigitMessage, lenAskSecondDigitMessage
-
-    ; Ask user to enter his digit
-    read firstDigit, 2
+    askForOneDigit    
 
     ; Increment the value
     mov eax, [firstDigit]
     inc eax
     mov [result], eax  
 
-    ; Print the result message
-    print resultMessage, lenResultMessage
-        
-    ; Print the result digit
-    print result, 1
+    print_result
 
     jmp _start
 
 decrement:
     ; Show the decrement message
     print decrementMessage, lenDecrementMessage
-    
-    ; Ask user for the firstDigit
-    print askSecondDigitMessage, lenAskSecondDigitMessage
-
-    ; Ask user to enter his digit
-    read firstDigit, 2
+    askForOneDigit
 
     ; Decrement value
     mov eax, [firstDigit]
@@ -308,11 +255,7 @@ decrement:
     sub eax, ebx
     mov [result], eax   
 
-    ; Print the result message
-    print resultMessage, lenResultMessage
-        
-    ; Print the result digit
-    print result, 1
+    print_result
 
     jmp _start
 
