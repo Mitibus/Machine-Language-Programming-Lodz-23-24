@@ -4,9 +4,9 @@ section .data
     menuMsg: db 10, "****** Calculator ******", 10, "Please choose which operation you wan to perform :", 10, "1) Addition", 10, "2) Subtraction", 10, "3) Multiplication", 10, "4) Division", 10, "5) Modulo", 10, "6) Incrementation", 10, "7) Decrementation", 10, "8) Exit Program", 10, "Your Choice: "
     lenMenuMsg: equ $ - menuMsg
 
-    askFirstDigitMessage: db "Enter first digit: "
+    askFirstDigitMessage: db "Enter first number (max 5 digits): "
     lenAskFirstDigitMessage: equ $-askFirstDigitMessage
-    askSecondDigitMessage: db "Enter the second digit: "
+    askSecondDigitMessage: db "Enter the second number (max 5 digits): "
     lenAskSecondDigitMessage: equ $-askSecondDigitMessage
 
     resultMessage: db "The result is: "
@@ -29,9 +29,9 @@ section .data
 
 section .bss
     menuChoice: resb 2
-    firstDigit: resb 2
-    secondDigit: resb 2
-    result: resb 1
+    firstDigit: resb 6
+    secondDigit: resb 6
+    result: resb 6
 
 %macro print 2
     mov eax, SYS_WRITE
@@ -54,13 +54,13 @@ section .bss
     print askFirstDigitMessage, lenAskFirstDigitMessage
     
     ; Ask user to enter his digit
-    read firstDigit, 2
+    read firstDigit, 6
 
     ; Ask user for the secondDigit
     print askSecondDigitMessage, lenAskSecondDigitMessage
     
     ; Ask user to enter his digit
-    read secondDigit, 2
+    read secondDigit, 6
 %endmacro
 
 %macro askForOneDigit 0
@@ -68,21 +68,31 @@ section .bss
     print askFirstDigitMessage, lenAskFirstDigitMessage
     
     ; Ask user to enter his digit
-    read firstDigit, 2
+    read firstDigit, 6
 %endmacro
 
-%macro print_result 0
+%macro print_result 1
     ; Print the result message
     print resultMessage, lenResultMessage
         
     ; Print the result digit
-    print result, 1
+    print result, %1
 %endmacro
 
 section .text
     global _start
 
 _start:
+    ; Reset all variables before any operations
+    mov ecx, 6 ; Length of variables
+    lea edi, [result] 
+    mov al, 0 
+    rep stosb 
+    lea edi, [firstDigit] 
+    rep stosb
+    lea edi, [secondDigit] 
+    rep stosb
+
     ; Display the menu
     print menuMsg, lenMenuMsg
 
@@ -120,42 +130,68 @@ addition:
     print additionMessage, lenAdditionMessage
     askForTwoDigit
 
-    ; Convert user input to int
-    mov eax, [firstDigit]
-    sub eax, '0'
-    mov ebx, [secondDigit]
-    sub ebx, '0'
+    mov esi, 4 ; Pointing to the rightmost digit
+    mov ecx, 5 ; Number of digits to add
+    clc ; Clear the carry flag
 
-    ; Sum the two digits
-    add eax, ebx
+    add_loop:
+        mov al, [firstDigit + esi]
+        adc al, [secondDigit + esi]
+        aaa
+        pushf ; Save the flags
+        or al, 30h ; Convert to ASCII
+        popf ; Restore the flags
 
-    ; Convert the result to ASCII
-    add eax, '0'
-    mov [result], eax
+        mov [result + esi], al
+        dec esi
+        loop add_loop
 
-    print_result
+    jnc no_carry
+    
+    ; If there is a carry, we need to add it to the result
+    mov esi, 4
+    lea edi, [result + 5]
 
+    ; Move the result to the right
+    shift_loop:
+        mov al, [result + esi]
+        mov [edi], al
+        dec esi
+        dec edi
+        cmp esi, -1
+        jge shift_loop
+
+    mov byte [result], '1' ; Add the carry to the result
+    print_result 6
     jmp _start
+
+    no_carry:
+        print_result 5
+        jmp _start
 
 subtraction:
     ; Show the substraction message
     print substractionMessage, lenSubstractionMessage
     askForTwoDigit
+start_sub:
+    ; Convert number_one from string to integer
+    mov esi, firstDigit
+    call atoi
+    mov ebx, eax ; store the integer value of number_one in ebx
 
-    ; Convert user input to int
-    mov eax, [firstDigit]
-    sub eax, '0'
-    mov ebx, [secondDigit]
-    sub ebx, '0'
+    ; Convert number_two from string to integer
+    mov esi, secondDigit
+    call atoi
 
-    ; Sub the two digits
-    sub eax, ebx
+    ; Subtract: number_two from number_one
+    sub ebx, eax ; ebx = ebx - eax (number_one - number_two)
+    mov eax, ebx
 
-    ; Convert the result to ASCII
-    add eax, '0'
-    mov [result], eax
-
-    print_result
+    ; Convert the result (eax) back to string
+    lea ecx, [result + 5]
+    call itoa
+        
+    print result, 5
 
     jmp _start
 
@@ -164,20 +200,23 @@ multiplication:
     print productMessage, lenProductMessage
     askForTwoDigit
 
-    ; Convert user input to int
-    mov eax, [firstDigit]
-    sub eax, '0'
-    mov ebx, [secondDigit]
-    sub ebx, '0'
+    ; Convert number_one from string to integer
+    mov esi, firstDigit
+    call atoi
+    mov ebx, eax ; store the integer value of number_one in ebx
+
+    ; Convert number_two from string to integer
+    mov esi, secondDigit
+    call atoi
 
     ; Multiply digit in EAX by EBX
     mul ebx
 
-    ; Convert the result to ASCII
-    add eax, '0'
-    mov [result], eax
+    ; Convert the result (eax) back to string
+    lea ecx, [result + 5]
+    call itoa
 
-    print_result
+    print_result 5
     
     jmp _start
 
@@ -186,22 +225,27 @@ division:
     print divisionMessage, lenDivisionMessage
     askForTwoDigit
 
-    ; Convert user input to int
-    movzx eax, byte [firstDigit] ; Use movzx to complete size with zero as we take only one byte from firstDigit
-    sub eax, '0'
-    movzx ebx, byte [secondDigit]
-    sub ebx, '0'
+    ; Convert number_one from string to integer
+    mov esi, firstDigit
+    call atoi
+    mov ebx, eax ; store the integer value of number_one in ebx
 
-    ; Divide digit in EDX:EAX by EBX
-    ; As we just want to divide EAX by EBX, we need to init EDX to ZERO
+    ; Convert number_two from string to integer
+    mov esi, secondDigit
+    call atoi
+
+    ; Multiply: number_two and number_one
+    mov edx, eax
+    mov eax, ebx
+    mov ebx, edx
     mov edx, 0x0
     div ebx
 
-    ; Convert the result to ASCII
-    add eax, '0'
-    mov [result], eax
+    ; Convert the result (EAX) back to string
+    lea ecx, [result + 5]
+    call itoa
 
-    print_result
+    print_result 5
 
     jmp _start
 
@@ -210,23 +254,29 @@ modulo:
     print moduloMessage, lenModuloMessage
     askForTwoDigit
 
-    ; Convert user input to int
-    movzx eax, byte [firstDigit] ; Use movzx to complete size with zero as we take only one byte from firstDigit
-    sub eax, '0'
-    movzx ebx, byte [secondDigit]
-    sub ebx, '0'
+    ; Convert number_one from string to integer
+    mov esi, firstDigit
+    call atoi
+    mov ebx, eax ; store the integer value of number_one in ebx
 
-    ; Divide digit in EDX:EAX by EBX
-    ; As we just want to divide EAX by EBX, we need to init EDX to ZERO
+    ; Convert number_two from string to integer
+    mov esi, secondDigit
+    call atoi
+
+    ; Multiply: number_two and number_one
+    mov edx, eax
+    mov eax, ebx
+    mov ebx, edx
     mov edx, 0x0
     div ebx
 
-    ; Remainder is stored in the edx register
-    ; Convert the result to ASCII
-    add edx, '0'
-    mov [result], edx 
+    mov eax, edx 
 
-    print_result
+    ; Convert the result (EAX) back to string
+    lea ecx, [result + 5]
+    call itoa
+
+    print_result 5
 
     jmp _start
 
@@ -235,32 +285,81 @@ increment:
     print incrementMessage, lenIncrementMessage
     askForOneDigit    
 
-    ; Increment the value
-    mov eax, [firstDigit]
-    inc eax
-    mov [result], eax  
+    ; Set second digit as one
+    mov byte [secondDigit], '0'
+    mov byte [secondDigit + 1], '0'
+    mov byte [secondDigit + 2], '0'
+    mov byte [secondDigit + 3], '0'
+    mov byte [secondDigit + 4], '1'
+    mov byte [secondDigit + 5], 0  ; Null-terminator
+    
+    mov esi, 4 ; Pointing to the rightmost digit
+    mov ecx, 5 ; Number of digits to add
+    clc ; Clear the carry flag
+    
+    jmp add_loop
 
-    print_result
-
-    jmp _start
+    ;jmp _start
 
 decrement:
     ; Show the decrement message
     print decrementMessage, lenDecrementMessage
     askForOneDigit
 
-    ; Decrement value
-    mov eax, [firstDigit]
-    mov ebx, 0x01
-    sub eax, ebx
-    mov [result], eax   
+    ; Set second digit as one
+    mov byte [secondDigit], '0'
+    mov byte [secondDigit + 1], '0'
+    mov byte [secondDigit + 2], '0'
+    mov byte [secondDigit + 3], '0'
+    mov byte [secondDigit + 4], '1'
+    mov byte [secondDigit + 5], 0  ; Null-terminator  
 
-    print_result
-
-    jmp _start
+    jmp start_sub
 
 exit:
     ; Exit the program
     mov eax, SYS_EXIT
     mov ebx, 0
     int SYS_CALL
+
+
+; Function for converting ASCII to integer
+atoi:
+    xor eax, eax ; Clear eax to store the result
+    xor ecx, ecx ; Clear ecx, will use it for counting digits
+atoi_loop:
+    cmp ecx, 5 ; Check if we've read 5 digits
+    jae atoi_done ; If yes, we're done
+    movzx edx, byte [esi+ecx] ; Load the next byte of the string into edx
+    cmp edx, '0' ; Check if the character is below '0'
+    jb atoi_done ; If it is, we are done
+    cmp edx, '9' ; Check if the character is above '9'
+    ja atoi_done ; If it is, we are done
+    sub edx, '0' ; Convert from ASCII to integer
+    imul eax, eax, 10 ; Multiply the current result by 10 (shift left in decimal)
+    add eax, edx ; Add the new digit
+    inc ecx ; Move to the next character
+    jmp atoi_loop
+atoi_done:
+    ret
+
+; Function for converting integer to ASCII
+itoa:
+    test eax, eax
+    jz itoa_zero ; Handle zero case
+
+    mov ebx, 10 ; Divider set to 10 for decimal conversion
+    mov edx, 0 ; Clear edx for division
+itoa_loop:
+    xor edx, edx ; Clear any previous remainder
+    div ebx ; Divide eax by 10, result in eax, remainder in edx
+    add dl, '0' ; Convert the remainder to an ASCII character
+    dec ecx ; Move back in the buffer
+    mov [ecx], dl ; Store the ASCII character
+    test eax, eax ; Check if eax is zero now
+    jnz itoa_loop ; If not, continue loop
+    ret
+
+itoa_zero:
+    mov byte [ecx-1], '0' ; Just set the buffer to '0'
+    ret
