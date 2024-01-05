@@ -14,7 +14,7 @@ section .data
 
     additionMessage: db "***** Addition *****", 10
     lenAdditionMessage: equ $-additionMessage
-    substractionMessage: db 10,"***** Substraction *****", 10
+    substractionMessage: db 10,"***** Subtraction *****", 10
     lenSubstractionMessage: equ $-substractionMessage
     productMessage: db 10, "***** Product *****", 10
     lenProductMessage: equ $-productMessage
@@ -31,7 +31,7 @@ section .bss
     menuChoice: resb 2
     firstDigit: resb 6
     secondDigit: resb 6
-    result: resb 6
+    result: resb 10
 
 %macro print 2
     mov eax, SYS_WRITE
@@ -84,10 +84,11 @@ section .text
 
 _start:
     ; Reset all variables before any operations
-    mov ecx, 6 ; Length of variables
+    mov ecx, 10 ; Length of variables
     lea edi, [result] 
     mov al, 0 
     rep stosb 
+    mov ecx, 6 ; Length of variables
     lea edi, [firstDigit] 
     rep stosb
     lea edi, [secondDigit] 
@@ -130,44 +131,25 @@ addition:
     print additionMessage, lenAdditionMessage
     askForTwoDigit
 
-    mov esi, 4 ; Pointing to the rightmost digit
-    mov ecx, 5 ; Number of digits to add
-    clc ; Clear the carry flag
+start_add:
+    ; Convert number_one from string to integer
+    mov esi, firstDigit
+    call atoi
+    mov ebx, eax ; store the integer value of number_one in ebx
 
-    add_loop:
-        mov al, [firstDigit + esi]
-        adc al, [secondDigit + esi]
-        aaa
-        pushf ; Save the flags
-        or al, 30h ; Convert to ASCII
-        popf ; Restore the flags
+    ; Convert number_two from string to integer
+    mov esi, secondDigit
+    call atoi
 
-        mov [result + esi], al
-        dec esi
-        loop add_loop
+    add ebx, eax ; ebx = ebx - eax (number_one - number_two)
+    mov eax, ebx
 
-    jnc no_carry
-    
-    ; If there is a carry, we need to add it to the result
-    mov esi, 4
-    lea edi, [result + 5]
+    ; Convert the result (ebx) back to string
+    lea ecx, [result + 9]
+    call itoa
 
-    ; Move the result to the right
-    shift_loop:
-        mov al, [result + esi]
-        mov [edi], al
-        dec esi
-        dec edi
-        cmp esi, -1
-        jge shift_loop
-
-    mov byte [result], '1' ; Add the carry to the result
-    print_result 6
+    print_result 9
     jmp _start
-
-    no_carry:
-        print_result 5
-        jmp _start
 
 subtraction:
     ; Show the substraction message
@@ -188,10 +170,10 @@ start_sub:
     mov eax, ebx
 
     ; Convert the result (eax) back to string
-    lea ecx, [result + 5]
+    lea ecx, [result + 9]
     call itoa
         
-    print result, 5
+    print_result 9
 
     jmp _start
 
@@ -213,10 +195,10 @@ multiplication:
     mul ebx
 
     ; Convert the result (eax) back to string
-    lea ecx, [result + 5]
+    lea ecx, [result + 9]
     call itoa
 
-    print_result 5
+    print_result 9
     
     jmp _start
 
@@ -242,10 +224,10 @@ division:
     div ebx
 
     ; Convert the result (EAX) back to string
-    lea ecx, [result + 5]
+    lea ecx, [result + 9]
     call itoa
 
-    print_result 5
+    print_result 9
 
     jmp _start
 
@@ -273,10 +255,10 @@ modulo:
     mov eax, edx 
 
     ; Convert the result (EAX) back to string
-    lea ecx, [result + 5]
+    lea ecx, [result + 9]
     call itoa
 
-    print_result 5
+    print_result 9
 
     jmp _start
 
@@ -297,7 +279,7 @@ increment:
     mov ecx, 5 ; Number of digits to add
     clc ; Clear the carry flag
     
-    jmp add_loop
+    jmp start_add
 
     ;jmp _start
 
